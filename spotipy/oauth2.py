@@ -100,7 +100,7 @@ class SpotifyOAuth(object):
 
     def __init__(self, client_id, client_secret, redirect_uri,
             state=None, scope=None, cache_path=None, proxies=None,
-            refresh_token_handler=None):
+            token_info_handler=None):
         '''
             Creates a SpotifyOAuth object
 
@@ -111,7 +111,7 @@ class SpotifyOAuth(object):
                  - state - security state
                  - scope - the desired scope of the request
                  - cache_path - path to location to save tokens
-                 - refresh_token_handler - a function called to customize auth storage
+                 - token_info_handler - a function called to customize auth storage
         '''
 
         self.client_id = client_id
@@ -121,14 +121,14 @@ class SpotifyOAuth(object):
         self.cache_path = cache_path
         self.scope=self._normalize_scope(scope)
         self.proxies = proxies
-        self.refresh_token_handler =refresh_token_handler
+        self.token_info_handler =token_info_handler
 
     def get_cached_token(self):
         ''' Gets a cached auth token
         '''
         token_info = None
-        if self.refresh_token_handler and self.refresh_token_handler(None):
-            token_info = self.refresh_token_handler(None)
+        if self.token_info_handler and self.token_info_handler(None):
+            token_info = self.token_info_handler(None)
 
             # if scopes don't match, then bail
             if 'scope' not in token_info or not self._is_scope_subset(self.scope, token_info['scope']):
@@ -155,8 +155,8 @@ class SpotifyOAuth(object):
         return token_info
 
     def _save_token_info(self, token_info):
-        if self.refresh_token_handler:
-            self.refresh_token_handler(token_info);
+        if self.token_info_handler:
+            self.token_info_handler(token_info);
         elif self.cache_path:
             try:
                 f = open(self.cache_path, 'w')
