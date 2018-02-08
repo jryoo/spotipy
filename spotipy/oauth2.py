@@ -99,7 +99,8 @@ class SpotifyOAuth(object):
     OAUTH_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 
     def __init__(self, client_id, client_secret, redirect_uri,
-            state=None, scope=None, cache_path=None, proxies=None):
+            state=None, scope=None, cache_path=None, proxies=None,
+            auth_hook=None):
         '''
             Creates a SpotifyOAuth object
 
@@ -110,6 +111,7 @@ class SpotifyOAuth(object):
                  - state - security state
                  - scope - the desired scope of the request
                  - cache_path - path to location to save tokens
+                 - auth_hook - a function called to customize auth storage
         '''
 
         self.client_id = client_id
@@ -119,12 +121,22 @@ class SpotifyOAuth(object):
         self.cache_path = cache_path
         self.scope=self._normalize_scope(scope)
         self.proxies = proxies
+        self.auth_hook =auth_hook
 
     def get_cached_token(self):
         ''' Gets a cached auth token
         '''
         token_info = None
-        if self.cache_path:
+        if self.auth_hook and self.auth_hook(None):
+            token_info = self.auth_hook(None)
+
+            # if scopes don't match, then bail
+            if 'scope' not in token_info or not self._is_scope_subset(self.scope, token_info['scope']):
+                return None
+
+            if self.is_token_expired(token_info):
+                token_info = self.refresh_access_token(token_info['refresh_token'])
+        elif self.cache_path:
             try:
                 f = open(self.cache_path)
                 token_info_string = f.read()
@@ -143,7 +155,9 @@ class SpotifyOAuth(object):
         return token_info
 
     def _save_token_info(self, token_info):
-        if self.cache_path:
+        if self.auth_hook:
+            self.auth_hook(token_info);
+        elif self.cache_path:
             try:
                 f = open(self.cache_path, 'w')
                 f.write(json.dumps(token_info))
@@ -163,6 +177,7 @@ class SpotifyOAuth(object):
     def get_authorize_url(self, state=None, show_dialog=False):
         """ Gets the URL to use to authorize this app
         """
+        print(self.client_id)
         payload = {'client_id': self.client_id,
                    'response_type': 'code',
                    'redirect_uri': self.redirect_uri}
