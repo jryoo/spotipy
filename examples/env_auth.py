@@ -8,7 +8,7 @@ import spotipy
 import spotipy.util as util
 import json
 
-def auth_hook(token_info=None):
+def refresh_token_handler(token_info=None):
     if token_info:
         os.environ['SPOTIPY_TOKEN_INFO'] = json.dumps(token_info)
     if os.getenv('SPOTIPY_TOKEN_INFO'):
@@ -23,7 +23,7 @@ else:
     sys.exit()
 
 scope = 'playlist-read-private playlist-read-collaborative playlist-modify-public  playlist-modify-private user-modify-playback-state user-read-playback-state'
-token = util.prompt_for_user_token(username, scope, auth_hook=auth_hook)
+token = util.prompt_for_user_token(username, scope, refresh_token_handler=refresh_token_handler)
 
 if token:
     sp = spotipy.Spotify(auth=token)
